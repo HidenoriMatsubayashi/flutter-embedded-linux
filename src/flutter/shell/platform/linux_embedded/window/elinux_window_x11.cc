@@ -8,6 +8,8 @@
 #include <linux/input-event-codes.h>
 #include <unistd.h>
 
+#include <climits>
+
 #include "flutter/shell/platform/linux_embedded/logger.h"
 #include "flutter/shell/platform/linux_embedded/surface/context_egl.h"
 
@@ -19,6 +21,11 @@ constexpr int kButton6 = 6;
 constexpr int kButton7 = 7;
 constexpr int kButton8 = 8;
 constexpr int kButton9 = 9;
+
+constexpr char kInternAtomClipboard[] = "CLIPBOARD";
+constexpr char kInternAtomUtf8String[] = "UTF8_STRING";
+constexpr char kInternAtomXSelData[] = "XSEL_DATA";
+constexpr char kInternAtomIncr[] = "INCR";
 }  // namespace
 
 ELinuxWindowX11::ELinuxWindowX11(FlutterDesktopViewProperties view_properties) {
@@ -26,7 +33,7 @@ ELinuxWindowX11::ELinuxWindowX11(FlutterDesktopViewProperties view_properties) {
 
   display_ = XOpenDisplay(NULL);
   if (!display_) {
-    ELINUX_LOG(ERROR) << "Failed to open display.";
+    ELINUX_LOG(ERROR) << "Failed to open X display.";
     return;
   }
 
@@ -159,7 +166,50 @@ void ELinuxWindowX11::UpdateVirtualKeyboardStatus(const bool show) {
   // currently not supported.
 }
 
-std::string ELinuxWindowX11::GetClipboardData() { return clipboard_data_; }
+std::string ELinuxWindowX11::GetClipboardData() {
+  Atom selection = XInternAtom(display_, kInternAtomClipboard, False);
+  Atom target = XInternAtom(display_, kInternAtomUtf8String, False);
+  Atom property = XInternAtom(display_, kInternAtomXSelData, False);
+  const Atom incrid = XInternAtom(display_, kInternAtomIncr, False);
+
+  XConvertSelection(display_, selection, target, property,
+                    native_window_->Window(), CurrentTime);
+
+  XEvent event;
+  do {
+    XNextEvent(display_, &event);
+  } while (event.type != SelectionNotify ||
+           event.xselection.selection != selection);
+
+  if (event.xselection.property == None) {
+    // e.g. Can't convert to the target format.
+    ELINUX_LOG(ERROR) << "Request to the clipboard failed.";
+    return "";
+  }
+
+  unsigned long nitems_return;
+  unsigned long bytes_after_return;
+  int actual_format_return;
+  unsigned char* prop_return = nullptr;
+  XGetWindowProperty(display_, native_window_->Window(), property, 0, INT_MAX,
+                     False, AnyPropertyType, &target, &actual_format_return,
+                     &nitems_return, &bytes_after_return, &prop_return);
+
+  if (target == incrid) {
+    // TODO: Add INCR support, but for Flutter use cases, it's often a copy of
+    // the text, and basically this feature shouldn't be needed.
+    ELINUX_LOG(ERROR) << "Clipboard buffer is too large and INCR data "
+                         "transfer is not supported yet.";
+    return "";
+  }
+
+  clipboard_data_ = "";
+  if (nitems_return && prop_return) {
+    clipboard_data_.append(reinterpret_cast<const char*>(prop_return),
+                           nitems_return);
+  }
+  return clipboard_data_;
+}
 
 void ELinuxWindowX11::SetClipboardData(const std::string& data) {
   clipboard_data_ = data;
