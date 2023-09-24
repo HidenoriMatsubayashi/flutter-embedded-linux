@@ -187,4 +187,11 @@ EGLint ContextEgl::GetAttrib(EGLint attribute) {
   return value;
 }
 
+EGLSurface ContextEgl::CreateSurfaceFromHandle(EGLenum handle_type,
+                                               EGLClientBuffer handle,
+                                               const EGLint* attributes) const {
+  return eglCreatePbufferFromClientBuffer(environment_->Display(), handle_type,
+                                          handle, config_, attributes);
+}
+
 }  // namespace flutter

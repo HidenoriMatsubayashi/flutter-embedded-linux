@@ -39,6 +39,16 @@ class SurfaceGl final : public SurfaceBase, public SurfaceGlDelegate {
 
   // |SurfaceGlDelegate|
   void* GlProcResolver(const char* name) const override;
+
+  // Gets a EGL display.
+  EGLDisplay EglDisplay() const { return context_->Display(); }
+
+  // Creates a EGLSurface for external GPU texture views.
+  EGLSurface CreateSurfaceFromHandle(EGLenum handle_type,
+                                     EGLClientBuffer handle,
+                                     const EGLint* attributes) const {
+    return context_->CreateSurfaceFromHandle(handle_type, handle, attributes);
+  }
 };
 
 }  // namespace flutter

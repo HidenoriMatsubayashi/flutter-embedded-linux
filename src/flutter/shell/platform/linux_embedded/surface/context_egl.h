@@ -36,6 +36,12 @@ class ContextEgl {
 
   EGLint GetAttrib(EGLint attribute);
 
+  EGLDisplay Display() const { return environment_->Display(); }
+
+  EGLSurface CreateSurfaceFromHandle(EGLenum handle_type,
+                                     EGLClientBuffer handle,
+                                     const EGLint* attributes) const;
+
  protected:
   std::unique_ptr<EnvironmentEgl> environment_;
   EGLConfig config_;

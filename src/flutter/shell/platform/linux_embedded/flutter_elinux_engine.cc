@@ -160,8 +160,8 @@ FlutterELinuxEngine::FlutterELinuxEngine(const FlutterProjectBundle& project)
       std::make_unique<IncomingMessageDispatcher>(messenger_.get());
 
   FlutterELinuxTextureRegistrar::ResolveGlFunctions(gl_procs_);
-  texture_registrar_ =
-      std::make_unique<FlutterELinuxTextureRegistrar>(this, gl_procs_);
+  texture_registrar_ = std::make_unique<FlutterELinuxTextureRegistrar>(
+      this, view_->GetRenderSurfaceTarget(), gl_procs_);
 
   vsync_waiter_ = std::make_unique<VsyncWaiter>();
 }

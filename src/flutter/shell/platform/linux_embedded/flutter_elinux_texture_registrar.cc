@@ -5,9 +5,9 @@
 #include "flutter/shell/platform/linux_embedded/flutter_elinux_texture_registrar.h"
 
 #include <iostream>
-#include <mutex>
 
 #include "flutter/shell/platform/embedder/embedder_struct_macros.h"
+#include "flutter/shell/platform/linux_embedded/external_texture_d3d.h"
 #include "flutter/shell/platform/linux_embedded/external_texture_egl_image.h"
 #include "flutter/shell/platform/linux_embedded/external_texture_pixelbuffer.h"
 #include "flutter/shell/platform/linux_embedded/flutter_elinux_engine.h"
@@ -21,8 +21,9 @@ namespace flutter {
 
 FlutterELinuxTextureRegistrar::FlutterELinuxTextureRegistrar(
     FlutterELinuxEngine* engine,
+    const ELinuxRenderSurfaceTarget* surface_manager,
     const GlProcs& gl_procs)
-    : engine_(engine), gl_procs_(gl_procs) {}
+    : engine_(engine), surface_manager_(surface_manager), gl_procs_(gl_procs) {}
 
 int64_t FlutterELinuxTextureRegistrar::RegisterTexture(
     const FlutterDesktopTextureInfo* texture_info) {
@@ -49,8 +50,15 @@ int64_t FlutterELinuxTextureRegistrar::RegisterTexture(
         texture_info->egl_image_config.callback,
         texture_info->egl_image_config.user_data, gl_procs_));
   } else if (texture_info->type == kFlutterDesktopGpuSurfaceTexture) {
-    std::cerr << "GpuSurfaceTexture is not yet supported." << std::endl;
-    return kInvalidTexture;
+    if (!texture_info->gpu_surface_config.callback) {
+      std::cerr << "Invalid gpu surface texture callback." << std::endl;
+      return kInvalidTexture;
+    }
+
+    return EmplaceTexture(std::make_unique<flutter::ExternalTextureD3d>(
+        texture_info->gpu_surface_config.callback,
+        texture_info->gpu_surface_config.user_data, surface_manager_,
+        gl_procs_));
   }
 
   std::cerr << "Attempted to register texture of unsupport type." << std::endl;

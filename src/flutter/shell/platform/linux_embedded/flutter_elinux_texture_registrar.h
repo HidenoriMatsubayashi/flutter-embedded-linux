@@ -11,6 +11,7 @@
 
 #include "flutter/shell/platform/common/public/flutter_texture_registrar.h"
 #include "flutter/shell/platform/linux_embedded/external_texture.h"
+#include "flutter/shell/platform/linux_embedded/window_binding_handler.h"
 
 namespace flutter {
 
@@ -20,8 +21,10 @@ class FlutterELinuxEngine;
 // Thread safety: All member methods are thread safe.
 class FlutterELinuxTextureRegistrar {
  public:
-  explicit FlutterELinuxTextureRegistrar(FlutterELinuxEngine* engine,
-                                         const GlProcs& gl_procs);
+  explicit FlutterELinuxTextureRegistrar(
+      FlutterELinuxEngine* engine,
+      const ELinuxRenderSurfaceTarget* surface_manager,
+      const GlProcs& gl_procs);
 
   // Registers a texture described by the given |texture_info| object.
   // Returns the non-zero, positive texture id or -1 on error.
@@ -48,6 +51,7 @@ class FlutterELinuxTextureRegistrar {
 
  private:
   FlutterELinuxEngine* engine_ = nullptr;
+  const ELinuxRenderSurfaceTarget* surface_manager_;
   const GlProcs& gl_procs_;
 
   // All registered textures, keyed by their IDs.
